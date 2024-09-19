@@ -1,21 +1,22 @@
 import csv 
 from datetime import datetime
 from sqlalchemy import select, delete 
+import asyncio
 
 from db import Session
 from models import BlogArticle, BlogAuthor, Product, BlogView, BlogSession, BlogUser
 
-def main():
-    with Session() as session:
-        with session.begin():
-            session.execute(delete(BlogView))
-            session.execute(delete(BlogSession))
-            session.execute(delete(BlogUser))
-            session.execute(delete(BlogArticle))
-            session.execute(delete(BlogAuthor))
+async def main():
+    async with Session() as session:
+        async with session.begin():
+            await session.execute(delete(BlogView))
+            await session.execute(delete(BlogSession))
+            await session.execute(delete(BlogUser))
+            await session.execute(delete(BlogArticle))
+            await session.execute(delete(BlogAuthor))
 
-    with Session() as session:
-        with session.begin():
+    async with Session() as session:
+        async with session.begin():
             all_authors = {}
             all_products = {}
 
@@ -32,7 +33,7 @@ def main():
                     if row['product']:
                         product = all_products.get(row['product'])
                         if product is None:
-                            product = session.scalar(select(Product).where(Product.name == row['product']))
+                            product = await session.scalar(select(Product).where(Product.name == row['product']))
                             all_products[product.name] = product
 
                     article = BlogArticle(
@@ -47,4 +48,4 @@ def main():
                     session.add(article)
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

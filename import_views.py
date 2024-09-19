@@ -1,3 +1,4 @@
+import asyncio
 import csv 
 from datetime import datetime
 from uuid import UUID
@@ -6,14 +7,14 @@ from sqlalchemy import select, delete
 from db import Session 
 from models import BlogArticle, BlogUser, BlogView, BlogSession, Customer
 
-def main():
-    with Session() as session:
-        with session.begin():
-            session.execute(delete(BlogView))
-            session.execute(delete(BlogSession))
-            session.execute(delete(BlogUser))
+async def main():
+    async with Session() as session:
+        async with session.begin():
+            await session.execute(delete(BlogView))
+            await session.execute(delete(BlogSession))
+            await session.execute(delete(BlogUser))
 
-    with Session() as session:
+    async with Session() as session:
         all_articles = {}
         all_customers = {}
         all_blog_users = {}
@@ -30,7 +31,7 @@ def main():
                     if row['customer']:
                         customer = all_customers.get(row['customer'])
                         if customer is None:
-                            customer = session.scalar   (select(Customer).where(Customer.name == row['customer']))
+                            customer = await session.scalar(select(Customer).where(Customer.name == row['customer']))
                         all_customers[customer.name] = customer
 
                     user_id = UUID(row['user'])
@@ -48,7 +49,7 @@ def main():
 
                 article = all_articles.get(row['title'])
                 if article is None:
-                    article = session.scalar(select(BlogArticle).where(BlogArticle.title == row['title']))
+                    article = await session.scalar(select(BlogArticle).where(BlogArticle.title == row['title']))
                 all_articles[article.title] = article 
 
                 view = BlogView(
@@ -61,11 +62,11 @@ def main():
                 i += 1
                 if i % 100 == 0:
                     print(i)
-                    session.commit()
+                    await session.commit()
             
             print(i)
-            session.commit()
+            await session.commit()
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
 

@@ -1,3 +1,4 @@
+import asyncio
 import csv 
 from datetime import datetime
 from sqlalchemy import select, delete 
@@ -5,15 +6,15 @@ from sqlalchemy import select, delete
 from db import Session 
 from models import Product, Customer, Order, OrderItem
 
-def main():
-    with Session() as session:
-        with session.begin():
-            session.execute(delete(OrderItem))
-            session.execute(delete(Order))
-            session.execute(delete(Customer))
+async def main():
+    async with Session() as session:
+        async with session.begin():
+            await session.execute(delete(OrderItem))
+            await session.execute(delete(Order))
+            await session.execute(delete(Customer))
 
-    with Session() as session:
-        with session.begin():
+    async with Session() as session:
+        async with session.begin():
             with open('orders.csv') as f:
                 reader = csv.DictReader(f)
 
@@ -31,7 +32,7 @@ def main():
 
                     product = all_products.get(row['product1'])
                     if product is None:
-                        product = session.scalar(select(Product).where(Product.name == row['product1']))
+                        product = await session.scalar(select(Product).where(Product.name == row['product1']))
                         all_products[row['product1']] = product
 
                     o.order_items.append(OrderItem(product=product, unit_price=float(row['unit_price1']), quantity=int(row['quantity1'])))
@@ -39,17 +40,17 @@ def main():
                     if row['product2']:
                         product = all_products.get(row['product2'])
                         if product is None:
-                            product = session.scalar(select(Product).where(Product.name == row['product2']))
+                            product = await session.scalar(select(Product).where(Product.name == row['product2']))
                             all_products[row['product2']] = product 
                         o.order_items.append(OrderItem(product=product, unit_price=float(row['unit_price2']), quantity=int(row['quantity2'])))
 
                     if row['product3']:
                         product = all_products.get(row['product3'])
                         if product is None:
-                            product = session.scalar(select(Product).where(Product.name == row['product3']))
+                            product = await session.scalar(select(Product).where(Product.name == row['product3']))
                             all_products[row['product3']] = product 
                         o.order_items.append(OrderItem(product=product, unit_price=float(row['unit_price3']), quantity=int(row['quantity3'])))
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

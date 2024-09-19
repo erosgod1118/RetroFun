@@ -1,19 +1,20 @@
+import asyncio
 import csv
 from sqlalchemy import delete
 
-from db import Model, Session, engine
+from db import Session
 from models import Product, Manufacturer, Country, ProductCountry
 
-def main():
-    with Session() as session:
-        with session.begin():
-            session.execute(delete(ProductCountry))
-            session.execute(delete(Product))
-            session.execute(delete(Manufacturer))
-            session.execute(delete(Country))
+async def main():
+    async with Session() as session:
+        async with session.begin():
+            await session.execute(delete(ProductCountry))
+            await session.execute(delete(Product))
+            await session.execute(delete(Manufacturer))
+            await session.execute(delete(Country))
 
-    with Session() as session:
-        with session.begin():
+    async with Session() as session:
+        async with session.begin():
             with open('products.csv') as f:
                 reader = csv.DictReader(f)
                 all_manufacturers = {}
@@ -42,4 +43,4 @@ def main():
                         all_countries[country].products.append(p)
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

@@ -22,8 +22,8 @@ class Product(Model):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey("manufacturers.id"), index=True)
     year: Mapped[int] = mapped_column(index=True)
     cpu: Mapped[Optional[str]] = mapped_column(String(32))
-    manufacturer: Mapped['Manufacturer'] = relationship(back_populates='products')
-    countries: Mapped[list['Country']] = relationship(secondary=ProductCountry, back_populates='products')
+    manufacturer: Mapped['Manufacturer'] = relationship(lazy='joined', innerjoin=True, back_populates='products')
+    countries: Mapped[list['Country']] = relationship(lazy='selectin', secondary=ProductCountry, back_populates='products')
     order_items: WriteOnlyMapped['OrderItem'] = relationship(back_populates='product')
     reviews: WriteOnlyMapped['ProductReview'] = relationship(back_populates='product')
     blog_articles: WriteOnlyMapped['BlogArticle'] = relationship(back_populates='product')
@@ -36,7 +36,7 @@ class Manufacturer(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(64), index=True, unique=True)
-    products: Mapped[list['Product']] = relationship(back_populates='manufacturer')
+    products: Mapped[list['Product']] = relationship(lazy='selectin', cascade='all, delete-orphan', back_populates='manufacturer')
 
     def __repr__(self):
         return f"Manufacturer({self.id}, {self.name})"
@@ -46,7 +46,7 @@ class Country(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(32), index=True, unique=True)
-    products: Mapped[list['Product']] = relationship(secondary=ProductCountry, back_populates='countries')
+    products: Mapped[list['Product']] = relationship(lazy='selectin', secondary=ProductCountry, back_populates='countries')
 
     def __repr__(self):
         return f'Country({self.id}, {self.name})'
@@ -57,8 +57,8 @@ class Order(Model):
     id: Mapped[UUID] = mapped_column(default=uuid4, primary_key=True)
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow, index=True)
     customer_id: Mapped[UUID] = mapped_column(ForeignKey('customers.id'), index=True)
-    customer: Mapped['Customer'] = relationship(back_populates='orders')
-    order_items: Mapped[list['OrderItem']] = relationship(back_populates='order')
+    customer: Mapped['Customer'] = relationship(lazy='joined', innerjoin=True, back_populates='orders')
+    order_items: Mapped[list['OrderItem']] = relationship(lazy='selectin', back_populates='order')
 
     def __repr__(self):
         return f'Order({self.id.hex})'
@@ -84,8 +84,8 @@ class OrderItem(Model):
     order_id: Mapped[UUID] = mapped_column(ForeignKey('orders.id'), primary_key=True)
     unit_price: Mapped[float]
     quantity: Mapped[int]
-    product: Mapped['Product'] = relationship(back_populates='order_items')
-    order: Mapped['Order'] = relationship(back_populates='order_items')
+    product: Mapped['Product'] = relationship(lazy='joined', innerjoin=True, back_populates='order_items')
+    order: Mapped['Order'] = relationship(lazy='joined', innerjoin=True, back_populates='order_items')
 
 class ProductReview(Model):
     __tablename__ = 'products_review'
@@ -95,8 +95,8 @@ class ProductReview(Model):
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow, index=True)
     rating: Mapped[int]
     comment: Mapped[Optional[str]] = mapped_column(Text)
-    product: Mapped['Product'] = relationship(back_populates='reviews')
-    customer: Mapped['Customer'] = relationship(back_populates='product_reviews')
+    product: Mapped['Product'] = relationship(lazy='joined', innerjoin=True, back_populates='reviews')
+    customer: Mapped['Customer'] = relationship(lazy='joined', innerjoin=True, back_populates='product_reviews')
 
 class BlogArticle(Model):
     __tablename__ = 'blog_articles'
@@ -106,16 +106,16 @@ class BlogArticle(Model):
     author_id: Mapped[int] = mapped_column(ForeignKey('blog_authors.id'), index=True)
     product_id: Mapped[Optional[int]] = mapped_column(ForeignKey('products.id'), index=True)
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow, index=True)
-    author: Mapped['BlogAuthor'] = relationship(back_populates='articles')
-    product: Mapped[Optional['Product']] = relationship(back_populates='blog_articles')
+    author: Mapped['BlogAuthor'] = relationship(lazy='joined', innerjoin=True, back_populates='articles')
+    product: Mapped[Optional['Product']] = relationship(lazy='joined', back_populates='blog_articles')
     views: WriteOnlyMapped[list['BlogView']] = relationship(back_populates='article')
 
     language_id: Mapped[Optional[int]] = mapped_column(ForeignKey('languages.id'), index=True)
-    language: Mapped[Optional['Language']] = relationship(back_populates='blog_articles')
+    language: Mapped[Optional['Language']] = relationship(lazy='joined', back_populates='blog_articles')
 
     translation_of_id: Mapped[Optional[int]] = mapped_column(ForeignKey('blog_articles.id'), index=True)
-    translation_of: Mapped[Optional['BlogArticle']] = relationship(remote_side=id, back_populates='translations')
-    translations: Mapped[list['BlogArticle']] = relationship(back_populates='translation_of')
+    translation_of: Mapped[Optional['BlogArticle']] = relationship(lazy='joined', remote_side=id, back_populates='translations')
+    translations: Mapped[list['BlogArticle']] = relationship(lazy='selectin', back_populates='translation_of')
 
     def __repr__(self):
         return f'BlogArticle({self.id}, "{self.title}")'
@@ -135,7 +135,7 @@ class BlogUser(Model):
 
     id: Mapped[UUID] = mapped_column(default=uuid4, primary_key=True)
     customer_id: Mapped[Optional[UUID]] = mapped_column(ForeignKey('customers.id'), index=True)
-    customer: Mapped[Optional['Customer']] = relationship(back_populates='blog_users')
+    customer: Mapped[Optional['Customer']] = relationship(lazy='joined', back_populates='blog_users')
     sessions: WriteOnlyMapped[list['BlogSession']] = relationship(back_populates='user')
 
     def __repr__(self):
@@ -146,7 +146,7 @@ class BlogSession(Model):
 
     id: Mapped[UUID] = mapped_column(default=uuid4, primary_key=True)
     user_id: Mapped[UUID] = mapped_column(ForeignKey('blog_users.id'), index=True)
-    user: Mapped['BlogUser'] = relationship(back_populates='sessions')
+    user: Mapped['BlogUser'] = relationship(lazy='joined', innerjoin=True, back_populates='sessions')
     views: WriteOnlyMapped[list['BlogView']] = relationship(back_populates='session')
 
     def __repr__(self):
@@ -159,8 +159,8 @@ class BlogView(Model):
     article_id: Mapped[int] = mapped_column(ForeignKey('blog_articles.id'))
     session_id: Mapped[UUID] = mapped_column(ForeignKey('blog_sessions.id'))
     timestamp: Mapped[datetime] = mapped_column(default=datetime.utcnow, index=True)
-    article: Mapped['BlogArticle'] = relationship(back_populates='views')
-    session: Mapped['BlogSession'] = relationship(back_populates='views')
+    article: Mapped['BlogArticle'] = relationship(lazy='joined', innerjoin=True, back_populates='views')
+    session: Mapped['BlogSession'] = relationship(lazy='joined', innerjoin=True, back_populates='views')
 
 class Language(Model):
     __tablename__ = 'languages'
