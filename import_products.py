@@ -1,10 +1,16 @@
 import csv
+from sqlalchemy import delete
+
 from db import Model, Session, engine
-from models import Product, Manufacturer, Country
+from models import Product, Manufacturer, Country, ProductCountry
 
 def main():
-    Model.metadata.drop_all(engine)
-    Model.metadata.create_all(engine)
+    with Session() as session:
+        with session.begin():
+            session.execute(delete(ProductCountry))
+            session.execute(delete(Product))
+            session.execute(delete(Manufacturer))
+            session.execute(delete(Country))
 
     with Session() as session:
         with session.begin():
@@ -20,7 +26,7 @@ def main():
                     countries = row.pop('country').split('/')
                     p = Product(**row)
                     
-                    if manufacturer not in all_manufacturers:  # check if key exists in dictionary variable all_manufacturers
+                    if manufacturer not in all_manufacturers:
                         m = Manufacturer(name=manufacturer)
                         session.add(m)
                         all_manufacturers[manufacturer] = m
